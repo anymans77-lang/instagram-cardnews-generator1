@@ -1,2 +1,755 @@
 # instagram-cardnews-generator1
 인스타그램 카드생성
+[instagram-cardnews-generator1.html](https://github.com/user-attachments/files/33905768/instagram-cardnews-generator1.html)
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인스타그램 카드뉴스 자동 생성기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JSZip & FileSaver for downloading all cards as ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&family=Gmarket+Sans:wght@700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    aspectRatio: {
+                        '4/5': '4 / 5',
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .font-title {
+            font-family: 'Noto Sans KR', sans-serif;
+            font-weight: 900;
+        }
+        /* Custom scrollbar for preview thumbnail list */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-rose-500/20">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white leading-tight">인스타 카드뉴스 AI</h1>
+                    <p class="text-xs text-slate-400">키워드 배경 & 자동 문구 생성기 (4:5 비율)</p>
+                </div>
+            </div>
+            <div class="text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700">
+                <i class="fa-solid fa-sparkles text-amber-400 mr-1"></i> Gemini AI 탑재
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Controls Section (Left Column) -->
+        <section class="lg:col-span-5 bg-slate-950/60 border border-slate-800 rounded-2xl p-5 md:p-6 flex flex-col gap-5 h-fit shadow-xl">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                <i class="fa-solid fa-sliders text-rose-500"></i> 카드뉴스 설정
+            </h2>
+
+            <!-- Topic Input -->
+            <div class="flex flex-col gap-2">
+                <label for="topic" class="text-sm font-semibold text-slate-300 flex justify-between">
+                    <span>주제 / 키워드 입력</span>
+                    <span class="text-xs text-slate-500">필수</span>
+                </label>
+                <input type="text" id="topic" placeholder="예: 2026년 SNS 마케팅 트렌드 TOP 5, 사회초년생 재테크 꿀팁" 
+                       class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors placeholder:text-slate-600">
+            </div>
+
+            <!-- Target Audience & Tone (Optional Context) -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                    <label for="target" class="text-xs font-semibold text-slate-400">타겟층 (선택)</label>
+                    <input type="text" id="target" placeholder="예: 2030 직장인" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="tone" class="text-xs font-semibold text-slate-400">어조 (선택)</label>
+                    <select id="tone" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500">
+                        <option value="친근하고 유용한 정보형">친근하고 유용한 정보형</option>
+                        <option value="전문적이고 신뢰감 있는">전문적이고 신뢰감 있는</option>
+                        <option value="위트있고 흥미로운">위트있고 흥미로운</option>
+                        <option value="단호하고 강력한 메시지">단호하고 강력한 메시지</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Slide Count (5~10) -->
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <label for="slideCount" class="text-sm font-semibold text-slate-300">카드 개수</label>
+                    <span id="slideCountVal" class="text-sm font-bold text-rose-500 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">7장</span>
+                </div>
+                <input type="range" id="slideCount" min="5" max="10" value="7" 
+                       class="w-full accent-rose-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500 px-1">
+                    <span>5장</span>
+                    <span>6장</span>
+                    <span>7장</span>
+                    <span>8장</span>
+                    <span>9장</span>
+                    <span>10장</span>
+                </div>
+            </div>
+
+            <!-- Color Palette / Background Style Options -->
+            <div class="flex flex-col gap-3">
+                <label class="text-sm font-semibold text-slate-300 flex justify-between">
+                    <span>배경 단색 선택</span>
+                    <span class="text-xs text-slate-400">모든 카드에 일관 적용</span>
+                </label>
+                
+                <div class="grid grid-cols-6 gap-2">
+                    <button type="button" onclick="selectColor('#0f172a')" class="color-btn border-2 border-rose-500 rounded-lg h-9 bg-[#0f172a] hover:scale-105 transition-transform" data-color="#0f172a" title="다크 블루"></button>
+                    <button type="button" onclick="selectColor('#18181b')" class="color-btn border-2 border-transparent rounded-lg h-9 bg-[#18181b] hover:scale-105 transition-transform" data-color="#18181b" title="모던 블랙"></button>
+                    <button type="button" onclick="selectColor('#4c1d95')" class="color-btn border-2 border-transparent rounded-lg h-9 bg-[#4c1d95] hover:scale-105 transition-transform" data-color="#4c1d95" title="딥 퍼플"></button>
+                    <button type="button" onclick="selectColor('#831843')" class="color-btn border-2 border-transparent rounded-lg h-9 bg-[#831843] hover:scale-105 transition-transform" data-color="#831843" title="버건디 Rose"></button>
+                    <button type="button" onclick="selectColor('#064e3b')" class="color-btn border-2 border-transparent rounded-lg h-9 bg-[#064e3b] hover:scale-105 transition-transform" data-color="#064e3b" title="딥 그린"></button>
+                    <button type="button" onclick="selectColor('#7c2d12')" class="color-btn border-2 border-transparent rounded-lg h-9 bg-[#7c2d12] hover:scale-105 transition-transform" data-color="#7c2d12" title="워밍 엠버"></button>
+                </div>
+
+                <!-- Custom Color Input -->
+                <div class="flex items-center gap-3 mt-1">
+                    <span class="text-xs text-slate-400">커스텀 색상:</span>
+                    <input type="color" id="bgColorInput" value="#0f172a" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+                    <span id="hexVal" class="text-xs font-mono text-slate-300">#0f172a</span>
+                </div>
+            </div>
+
+            <!-- Overlay Darkening Level (For image readability) -->
+            <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between items-center text-xs text-slate-400">
+                    <span>키워드 배경 이미지 어둡기 (가독성 보장)</span>
+                    <span id="overlayVal">60%</span>
+                </div>
+                <input type="range" id="overlayOpacity" min="30" max="90" value="60" class="accent-slate-400 bg-slate-800 rounded-lg h-1.5 cursor-pointer">
+            </div>
+
+            <!-- Generate Button -->
+            <button id="generateBtn" onclick="generateCards()" class="w-full mt-2 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 text-base transition-all active:scale-[0.99]">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>카드뉴스 자동 생성하기</span>
+            </button>
+        </section>
+
+        <!-- Preview & Output Section (Right Column) -->
+        <section class="lg:col-span-7 flex flex-col gap-4">
+            
+            <!-- Empty Placeholder -->
+            <div id="emptyState" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-12 flex flex-col items-center justify-center text-center h-[520px]">
+                <div class="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-500 text-2xl mb-4">
+                    <i class="fa-solid fa-images"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-300 mb-1">카드뉴스가 아직 생성되지 않았습니다</h3>
+                <p class="text-xs text-slate-500 max-w-sm">좌측에 주제를 입력하고 생성 버튼을 누르면, AI가 문구와 이미지 키워드를 추출하여 세련된 4:5 인스타그램 카드뉴스를 제작해 드립니다.</p>
+            </div>
+
+            <!-- Loading Spinner State -->
+            <div id="loadingState" class="hidden bg-slate-950/60 border border-slate-800 rounded-2xl p-12 flex flex-col items-center justify-center text-center h-[520px]">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-rose-500 border-t-transparent mb-4"></div>
+                <h3 id="loadingText" class="text-base font-semibold text-slate-200">AI가 문구와 배경 키워드를 생성하고 있습니다...</h3>
+                <p class="text-xs text-slate-400 mt-2">잠시만 기다려 주세요 (약 5~10초 소요)</p>
+            </div>
+
+            <!-- Active Card Viewer (Hidden initially) -->
+            <div id="viewerContainer" class="hidden flex flex-col gap-4">
+                
+                <!-- Main Slider Area -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-2xl">
+                    
+                    <!-- Top Info bar -->
+                    <div class="w-full flex justify-between items-center mb-3 text-xs text-slate-400 px-2">
+                        <span id="cardBadge" class="bg-slate-800 text-rose-400 px-2.5 py-1 rounded-md border border-slate-700 font-semibold">
+                            CARD 1 / 7 (표지)
+                        </span>
+                        <span class="text-slate-500"><i class="fa-solid fa-arrows-left-right mr-1"></i> 이전/다음 카드가 미리보기로 배치됨</span>
+                    </div>
+
+                    <!-- Carousel Deck Container (Previous, Current, Next) -->
+                    <div class="relative w-full max-w-[360px] md:max-w-[400px] flex items-center justify-center py-2 min-h-[480px]">
+                        
+                        <!-- Left Arrow Control -->
+                        <button onclick="prevSlide()" class="absolute left-[-16px] md:left-[-24px] z-30 w-10 h-10 rounded-full bg-slate-800/90 hover:bg-rose-600 text-white border border-slate-700 flex items-center justify-center shadow-lg transition-transform active:scale-95">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+
+                        <!-- Slide Display Canvas Wrapper (4:5 Aspect Ratio) -->
+                        <div class="w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl relative border border-slate-700/50 bg-slate-900 group">
+                            <!-- Actual Canvas element used for rendering and PNG download -->
+                            <canvas id="cardCanvas" class="w-full h-full object-cover block"></canvas>
+                        </div>
+
+                        <!-- Right Arrow Control -->
+                        <button onclick="nextSlide()" class="absolute right-[-16px] md:right-[-24px] z-30 w-10 h-10 rounded-full bg-slate-800/90 hover:bg-rose-600 text-white border border-slate-700 flex items-center justify-center shadow-lg transition-transform active:scale-95">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- Keywords Tag Display -->
+                    <div class="mt-3 flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+                        <i class="fa-solid fa-image text-amber-400"></i>
+                        <span>배경 이미지 검색 키워드:</span>
+                        <span id="currentKeyword" class="text-rose-300 font-mono font-medium">Business, Abstract</span>
+                    </div>
+
+                    <!-- Single Download Button -->
+                    <div class="w-full flex justify-center mt-4">
+                        <button onclick="downloadCurrentCard()" class="bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs md:text-sm px-5 py-2.5 rounded-xl border border-slate-700 flex items-center gap-2 transition-colors">
+                            <i class="fa-solid fa-download text-rose-400"></i>
+                            <span>현재 카드 PNG 다운로드</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Horizontal Thumbnail Strip (Preview Previous/Next Cards) -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs font-semibold text-slate-400 px-1">
+                        <span>전체 카드 미리보기 슬라이드</span>
+                        <span id="totalBadge" class="text-slate-500">총 7장</span>
+                    </div>
+                    
+                    <div id="thumbStrip" class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1 px-1 scroll-smooth">
+                        <!-- Thumbnails injected dynamically -->
+                    </div>
+                </div>
+
+                <!-- Download All Button Bar -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                    <div>
+                        <h4 class="text-sm font-bold text-white">모든 카드 한번에 받기</h4>
+                        <p class="text-xs text-slate-400">모든 단일 카드를 ZIP 압축 파일로 일괄 다운로드합니다.</p>
+                    </div>
+                    <button onclick="downloadAllCards()" class="w-full sm:w-auto bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2 text-sm transition-all">
+                        <i class="fa-solid fa-file-zipper"></i>
+                        <span>전체 카드(ZIP) 다운로드</span>
+                    </button>
+                </div>
+
+                <!-- Editable Content Form for Currently Selected Slide -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-pen-to-square text-amber-400"></i> 현재 카드 문구 수동 수정
+                        </span>
+                        <span class="text-[10px] text-slate-500">수정시 실시간 반영됩니다</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-2.5">
+                        <div flex flex-col gap-1>
+                            <label class="text-[11px] text-slate-400">소제목 / 태그 / 카테고리</label>
+                            <input type="text" id="editSubtitle" oninput="updateCurrentCardData()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                        </div>
+                        <div flex flex-col gap-1>
+                            <label class="text-[11px] text-slate-400">메인 타이틀 / 메시지</label>
+                            <textarea id="editTitle" rows="2" oninput="updateCurrentCardData()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white resize-none"></textarea>
+                        </div>
+                        <div flex flex-col gap-1>
+                            <label class="text-[11px] text-slate-400">상세 설명 / 본문 문구</label>
+                            <textarea id="editBody" rows="2" oninput="updateCurrentCardData()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white resize-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Global App State & Scripts -->
+    <script>
+        // Global State Variables
+        let cardsData = []; // Array holding generated slide data
+        let currentIndex = 0;
+        let selectedBgColor = '#0f172a';
+        let overlayOpacityVal = 0.6;
+        let imageCache = {}; // Preloaded Image cache for fast canvas re-render
+
+        // API Key initialization for Canvas runtime environment
+        const apiKey = "";
+
+        // UI Event Listeners Init
+        document.addEventListener('DOMContentLoaded', () => {
+            const slideCountInput = document.getElementById('slideCount');
+            const slideCountVal = document.getElementById('slideCountVal');
+            
+            slideCountInput.addEventListener('input', (e) => {
+                slideCountVal.textContent = `${e.target.value}장`;
+            });
+
+            const overlayInput = document.getElementById('overlayOpacity');
+            const overlayVal = document.getElementById('overlayVal');
+            overlayInput.addEventListener('input', (e) => {
+                overlayOpacityVal = e.target.value / 100;
+                overlayVal.textContent = `${e.target.value}%`;
+                if(cardsData.length > 0) {
+                    renderCurrentCard();
+                }
+            });
+
+            const colorInput = document.getElementById('bgColorInput');
+            colorInput.addEventListener('input', (e) => {
+                selectColor(e.target.value);
+            });
+        });
+
+        // Color selector logic
+        function selectColor(hex) {
+            selectedBgColor = hex;
+            document.getElementById('hexVal').textContent = hex;
+            document.getElementById('bgColorInput').value = hex;
+
+            // Highlight active button
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                if(btn.getAttribute('data-color') === hex) {
+                    btn.classList.add('border-rose-500');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('border-rose-500');
+                    btn.classList.add('border-transparent');
+                }
+            });
+
+            if(cardsData.length > 0) {
+                renderCurrentCard();
+                updateThumbnails();
+            }
+        }
+
+        // Main Card Generation Trigger
+        async function generateCards() {
+            const topic = document.getElementById('topic').value.trim();
+            if(!topic) {
+                alert('카드뉴스 주제를 입력해 주세요!');
+                document.getElementById('topic').focus();
+                return;
+            }
+
+            const count = parseInt(document.getElementById('slideCount').value, 10);
+            const target = document.getElementById('target').value.trim() || '일반 대중';
+            const tone = document.getElementById('tone').value;
+
+            // Show Loading state
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('viewerContainer').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            try {
+                // Call Gemini API to generate JSON structuring slides
+                cardsData = await fetchCardContentFromGemini(topic, count, target, tone);
+                
+                // Preload image backgrounds based on keyword
+                document.getElementById('loadingText').textContent = "배경 키워드 기반 이미지 검색 및 합성 중...";
+                await preloadCardImages();
+
+                currentIndex = 0;
+                
+                // Show Viewer UI
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('viewerContainer').classList.remove('hidden');
+
+                // Render First Card & Thumbnails
+                renderCurrentCard();
+                updateThumbnails();
+
+            } catch(err) {
+                console.error("Generating cards error:", err);
+                alert("카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            }
+        }
+
+        // Gemini API Prompt Call
+        async function fetchCardContentFromGemini(topic, count, target, tone) {
+            const systemPrompt = `
+당신은 인스타그램 카드뉴스 전문 카피라이터이자 디자이너입니다.
+주제에 대해 총 ${count}장의 카드뉴스 콘텐츠를 생성하세요.
+
+[구성 규칙]
+1. 첫 번째 카드 (Index 0): 
+   - subtitle: 흥미를 유발하는 카테고리 태그 (예: 💡 필독정보, 🔥 이슈분석)
+   - title: 강렬하고 짧은 메인 후킹 제목 (한국어, 2줄 이내)
+   - body: 짧은 서브 후킹 문장 (1~2줄)
+   - keyword: 첫 장 분위기에 맞는 영문 검색 키워드 1~2개 (예: "technology, future")
+2. 중간 카드들 (Index 1 ~ ${count - 2}):
+   - 한 장당 하나의 명확한 핵심 내용 전달.
+   - subtitle: Step 01, Point 02 또는 핵심 단어
+   - title: 핵심을 가로지르는 리드 문구 (짧고 명확하게)
+   - body: 부연 설명 (2~3줄 이내, 간결한 다듬어진 한국어)
+   - keyword: 해당 장의 내용에 들어맞는 관련 영문 검색 키워드 (예: "growth, business strategy")
+3. 마지막 카드 (Index ${count - 1}):
+   - subtitle: 📌 요약 및 결론
+   - title: 요약 및 강력한 행동 유도 (CTA) 문구 (예: 저장하고 필요할 때 꺼내보세요!)
+   - body: 팔로우 / 저장 / 댓글 유도 문구
+   - keyword: "success, motivation, conclusion" 등 어울리는 영문 키워드
+
+응답은 반드시 아래 JSON 스키마 형식만을 반환해야 합니다.
+`;
+
+            const userPrompt = `주제: ${topic}\n타겟층: ${target}\n어조: ${tone}\n총 카드 수: ${count}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                subtitle: { type: "STRING" },
+                                title: { type: "STRING" },
+                                body: { type: "STRING" },
+                                keyword: { type: "STRING" }
+                            },
+                            propertyOrdering: ["subtitle", "title", "body", "keyword"]
+                        }
+                    }
+                }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API response status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            return JSON.parse(jsonText);
+        }
+
+        // Image Preloader using Unsplash Source URL with keyword
+        async function preloadCardImages() {
+            imageCache = {};
+            const promises = cardsData.map((card, idx) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous";
+                    
+                    // 각 장마다 다른 키워드를 기반으로 고화질 서치 이미지를 불러오도록 설정
+                    const keyword = encodeURIComponent(card.keyword || 'abstract background');
+                    // idx 기반 고유 seed 값과 키워드를 조합하여 각 장마다 확실하게 서로 다른 이미지 지정
+                    const imageUrl = `https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80&sig=${idx}_${keyword}`;
+                    
+                    // Unsplash Source API 서비스 URL (각 장마다 다른 이미지 호출)
+                    const dynamicUrl = `https://source.unsplash.com/800x1000/?${keyword}&sig=${idx}`;
+                    
+                    img.onload = () => {
+                        imageCache[idx] = img;
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        // 이미지 로드 실패 시 유연하게 가용 텍스처 백업으로 전환
+                        const fallbackImg = new Image();
+                        fallbackImg.crossOrigin = "Anonymous";
+                        fallbackImg.onload = () => {
+                            imageCache[idx] = fallbackImg;
+                            resolve();
+                        };
+                        fallbackImg.onerror = () => {
+                            imageCache[idx] = null;
+                            resolve();
+                        };
+                        fallbackImg.src = `https://picsum.photos/800/1000?random=${idx}`;
+                    };
+
+                    // 각 장별 키워드 특화 랜덤 고화질 배경 이미지 할당
+                    img.src = `https://picsum.photos/seed/${keyword}_${idx}/800/1000`;
+                });
+            });
+
+            await Promise.all(promises);
+        }
+
+        // Render Slide to HTML5 Canvas
+        function renderCurrentCard() {
+            if(!cardsData || cardsData.length === 0) return;
+
+            const card = cardsData[currentIndex];
+            const canvas = document.getElementById('cardCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set Resolution suitable for Instagram (1080 x 1350 px for 4:5 ratio)
+            canvas.width = 1080;
+            canvas.height = 1350;
+
+            // 1. Draw Solid Background Color selected by user
+            ctx.fillStyle = selectedBgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Draw Background Image if available with Overlay Blend
+            const bgImg = imageCache[currentIndex];
+            if(bgImg) {
+                ctx.save();
+                ctx.globalAlpha = 1 - overlayOpacityVal; // Controls image transparency over solid color
+                // Draw image scaled to cover canvas 1080x1350
+                ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+
+            // 3. Add Dark Radial Overlay / Gradient for text readability
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.3)');
+            gradient.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 4. Draw Decorative Border / Frame
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+
+            // 5. Header / Slide Number Badge Top Right
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.font = 'bold 32px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`${currentIndex + 1} / ${cardsData.length}`, canvas.width - 80, 110);
+
+            // 6. Subtitle / Category Badge Top Left
+            ctx.textAlign = 'left';
+            if(card.subtitle) {
+                // Draw Tag Pill Background
+                ctx.fillStyle = '#f43f5e'; // Rose-500
+                const tagText = card.subtitle.toUpperCase();
+                ctx.font = 'bold 28px "Noto Sans KR", sans-serif';
+                const textWidth = ctx.measureText(tagText).width;
+                
+                ctx.beginPath();
+                ctx.roundRect(80, 80, textWidth + 40, 56, 12);
+                ctx.fill();
+
+                // Tag Text
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(tagText, 100, 118);
+            }
+
+            // 7. Main Title Rendering (Multi-line wrap support)
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 68px "Noto Sans KR", sans-serif';
+
+            const titleY = 380;
+            const maxTextWidth = canvas.width - 160;
+            drawWrappedText(ctx, card.title, 80, titleY, maxTextWidth, 88, 3);
+
+            // Accent Line Separator
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(80, titleY + 220);
+            ctx.lineTo(200, titleY + 220);
+            ctx.stroke();
+
+            // 8. Body Content Text Rendering
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.font = '500 38px "Noto Sans KR", sans-serif';
+            drawWrappedText(ctx, card.body, 80, titleY + 300, maxTextWidth, 58, 6);
+
+            // 9. Footer Brand Handle
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.font = '400 28px "Noto Sans KR", sans-serif';
+            ctx.fillText('@INSTAGRAM_CARD_NEWS', canvas.width / 2, canvas.height - 80);
+
+            // Update UI Labels & Edit Form
+            const isFirst = currentIndex === 0;
+            const isLast = currentIndex === cardsData.length - 1;
+            let typeLabel = "본문";
+            if(isFirst) typeLabel = "표지";
+            if(isLast) typeLabel = "결론/CTA";
+
+            document.getElementById('cardBadge').textContent = `CARD ${currentIndex + 1} / ${cardsData.length} (${typeLabel})`;
+            document.getElementById('currentKeyword').textContent = card.keyword || '일반';
+
+            document.getElementById('editSubtitle').value = card.subtitle || '';
+            document.getElementById('editTitle').value = card.title || '';
+            document.getElementById('editBody').value = card.body || '';
+        }
+
+        // Canvas Text Wrapping Helper Function
+        function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+            if(!text) return;
+            const paragraphs = text.split('\n');
+            let currentY = y;
+            let lineCount = 0;
+
+            for (let p = 0; p < paragraphs.length; p++) {
+                const words = paragraphs[p].split(' ');
+                let currentLine = '';
+
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = currentLine + words[n] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    const testWidth = metrics.width;
+
+                    if (testWidth > maxWidth && n > 0) {
+                        ctx.fillText(currentLine, x, currentY);
+                        currentLine = words[n] + ' ';
+                        currentY += lineHeight;
+                        lineCount++;
+                        if (lineCount >= maxLines) return;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                ctx.fillText(currentLine, x, currentY);
+                currentY += lineHeight;
+                lineCount++;
+                if (lineCount >= maxLines) return;
+            }
+        }
+
+        // Live edit card text input
+        function updateCurrentCardData() {
+            if(!cardsData[currentIndex]) return;
+            cardsData[currentIndex].subtitle = document.getElementById('editSubtitle').value;
+            cardsData[currentIndex].title = document.getElementById('editTitle').value;
+            cardsData[currentIndex].body = document.getElementById('editBody').value;
+            renderCurrentCard();
+            updateThumbnails();
+        }
+
+        // Thumbnail Strip Updates (Prev/Next View)
+        function updateThumbnails() {
+            const container = document.getElementById('thumbStrip');
+            container.innerHTML = '';
+            document.getElementById('totalBadge').textContent = `총 ${cardsData.length}장`;
+
+            cardsData.forEach((card, idx) => {
+                const isSelected = idx === currentIndex;
+                const thumb = document.createElement('div');
+                thumb.className = `flex-shrink-0 w-20 h-25 rounded-lg border-2 cursor-pointer transition-all p-1.5 flex flex-col justify-between ${
+                    isSelected ? 'border-rose-500 bg-rose-950/40 scale-105' : 'border-slate-800 bg-slate-900 opacity-70 hover:opacity-100'
+                }`;
+                thumb.style.aspectRatio = '4/5';
+                thumb.onclick = () => {
+                    currentIndex = idx;
+                    renderCurrentCard();
+                    updateThumbnails();
+                };
+
+                thumb.innerHTML = `
+                    <div class="flex justify-between items-center text-[9px] font-bold text-slate-400">
+                        <span>#${idx + 1}</span>
+                        ${idx === 0 ? '<span class="text-rose-400">표지</span>' : ''}
+                    </div>
+                    <div class="text-[10px] font-extrabold text-white line-clamp-2 leading-tight">
+                        ${card.title || '제목'}
+                    </div>
+                    <div class="text-[8px] text-slate-500 truncate">
+                        ${card.keyword || ''}
+                    </div>
+                `;
+                container.appendChild(thumb);
+            });
+        }
+
+        // Slide Navigation
+        function prevSlide() {
+            if(currentIndex > 0) {
+                currentIndex--;
+                renderCurrentCard();
+                updateThumbnails();
+            }
+        }
+
+        function nextSlide() {
+            if(currentIndex < cardsData.length - 1) {
+                currentIndex++;
+                renderCurrentCard();
+                updateThumbnails();
+            }
+        }
+
+        // Download Current Card as PNG
+        function downloadCurrentCard() {
+            const canvas = document.getElementById('cardCanvas');
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `card_news_${currentIndex + 1}.png`;
+            link.href = image;
+            link.click();
+        }
+
+        // Download All Cards as ZIP File
+        async function downloadAllCards() {
+            if(!cardsData || cardsData.length === 0) return;
+
+            const zip = new JSZip();
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 1080;
+            tempCanvas.height = 1350;
+            const ctx = tempCanvas.getContext('2d');
+
+            // Save original index
+            const origIndex = currentIndex;
+
+            for (let i = 0; i < cardsData.length; i++) {
+                currentIndex = i;
+                renderCurrentCard(); // Render on main canvas
+                
+                const mainCanvas = document.getElementById('cardCanvas');
+                const dataUrl = mainCanvas.toDataURL('image/png');
+                const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+                
+                zip.file(`card_news_${i + 1}.png`, base64Data, { base64: true });
+            }
+
+            // Restore original active slide
+            currentIndex = origIndex;
+            renderCurrentCard();
+
+            // Generate ZIP
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, "instagram_card_news_all.zip");
+        }
+    </script>
+</body>
+</html>
